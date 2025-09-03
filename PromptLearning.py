@@ -163,14 +163,14 @@ if __name__ == '__main__':
     ##### nni #####
 
     if task == "crime":
-        region_emb_path = "/data5/luyisha/guozitao/LLM_region/data/best_emb_chi_crime.npy"
-        prompt_emb_path = f"/data5/luyisha/guozitao/LLM_region/prompt_embs_{args.model}_crime.npy"
+        region_emb_path = "/data5/luyisha/guozitao/Prompt4RE/data/best_emb_chi_crime.npy"
+        prompt_emb_path = f"/data5/luyisha/guozitao/Prompt4RE/prompt_embs_{args.model}_crime.npy"
     elif task == "checkIn":
-        region_emb_path = "/data5/luyisha/guozitao/LLM_region/data/best_emb_chi_checkIn.npy"
-        prompt_emb_path = f"/data5/luyisha/guozitao/LLM_region/prompt_embs_{args.model}_checkIn.npy"
+        region_emb_path = "/data5/luyisha/guozitao/Prompt4RE/data/best_emb_chi_checkIn.npy"
+        prompt_emb_path = f"/data5/luyisha/guozitao/Prompt4RE/prompt_embs_{args.model}_checkIn.npy"
     elif task == "serviceCall":
-        region_emb_path = "/data5/luyisha/guozitao/LLM_region/data/best_emb_chi_serviceCall.npy"
-        prompt_emb_path = f"/data5/luyisha/guozitao/LLM_region/prompt_embs_{args.model}_serviceCall.npy"
+        region_emb_path = "/data5/luyisha/guozitao/Prompt4RE/data/best_emb_chi_serviceCall.npy"
+        prompt_emb_path = f"/data5/luyisha/guozitao/Prompt4RE/prompt_embs_{args.model}_serviceCall.npy"
     else:
         raise ValueError("Unknown task!")
     region_embs = np.load(region_emb_path)   # (77, 144)

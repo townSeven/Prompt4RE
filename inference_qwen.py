@@ -23,7 +23,7 @@ model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
 processor = AutoProcessor.from_pretrained("/data4/jiangchangyang/Qwen-VL-master/Qwen2.5_VL")
 
 # ==================== 读取 JSON ====================
-json_file = "/data5/luyisha/guozitao/LLM_region/data/prompt_data.json"
+json_file = "/data5/luyisha/guozitao/Prompt4RE/data/prompt_data.json"
 with open(json_file, "r", encoding="utf-8") as f:
     dataset = json.load(f)
 

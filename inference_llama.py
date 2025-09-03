@@ -16,7 +16,7 @@ def load_and_resize(image_path, size=(640, 640)):
     return img
 
 ### 模型加载
-model_path = "/data5/luyisha/guozitao/LLM_region/model/Llama-3.2-11B-Vision-Instruct"
+model_path = "/data5/luyisha/guozitao/Prompt4RE/model/Llama-3.2-11B-Vision-Instruct"
 model = MllamaForConditionalGeneration.from_pretrained(
     model_path,
     torch_dtype=torch.float16,
@@ -25,7 +25,7 @@ model = MllamaForConditionalGeneration.from_pretrained(
 processor = AutoProcessor.from_pretrained(model_path)
 
 ### 读取数据
-json_file = "/data5/luyisha/guozitao/LLM_region/data/prompt_data.json"
+json_file = "/data5/luyisha/guozitao/Prompt4RE/data/prompt_data.json"
 with open(json_file, "r", encoding="utf-8") as f:
     dataset = json.load(f)
 embeddings = []
