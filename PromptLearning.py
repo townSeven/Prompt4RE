@@ -108,7 +108,7 @@ def crimePred(counts, text_embs, region_embs, kf_splits=10, epochs=1000, lr=1e-3
 
 
 def run_task(task="crime", text_embs=None, region_embs=None, device="cuda",
-             kf_splits=10, epochs=args.epochs, lr=args.learning_rate, text_output_dim=args.text_output_dim, result_file="experiment_results.csv"):
+             kf_splits=10, epochs=args.epochs, lr=args.lr, text_output_dim=args.text_output_dim, result_file="experiment_results.csv"):
     """运行不同任务并保存结果"""
     if task == "checkIn":
         labels = np.load("/data5/luyisha/guozitao/HAFusion/data_Chi/check_counts.npy")
@@ -154,7 +154,7 @@ if __name__ == '__main__':
     task = args.task
     model_params = {
         "epochs": args.epochs,
-        "lr": args.learning_rate,
+        "lr": args.lr,
         "text_output_dim": args.text_output_dim
     }
     ##### nni #####
