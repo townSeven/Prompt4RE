@@ -9,7 +9,9 @@ from T_RAlign import TRAlign
 import pandas as pd
 from datetime import datetime
 import os
-
+from parse_args import args
+from tqdm import tqdm
+import nni
 
 def compute_metrics(y_pred, y_test):
     """计算 MAE, RMSE, R2"""
@@ -41,7 +43,7 @@ class CrimeEnhanced(nn.Module):
         return tmp
 
 
-def crimePred(counts, text_embs, region_embs, kf_splits=10, epochs=200, lr=1e-3, device="cuda"):
+def crimePred(counts, text_embs, region_embs, kf_splits=10, epochs=1000, lr=1e-3, text_output_dim=args.text_output_dim, device="cuda"):
     index = torch.arange(len(region_embs))
     kf = KFold(n_splits=kf_splits, shuffle=True, random_state=2024)
 
@@ -57,7 +59,7 @@ def crimePred(counts, text_embs, region_embs, kf_splits=10, epochs=200, lr=1e-3,
         T_train, T_test = text_embs[train_index], text_embs[test_index]
         Y_train, Y_test = counts[train_index], counts[test_index]
 
-        reg.fit(X_train, Y_train)  # 初始岭回归
+        reg.fit(X_train, Y_train)  # 初始化回归
 
         # 转换为 torch
         X_train = torch.tensor(X_train, dtype=torch.float32).to(device)
@@ -73,13 +75,13 @@ def crimePred(counts, text_embs, region_embs, kf_splits=10, epochs=200, lr=1e-3,
             torch.tensor(reg.intercept_, dtype=torch.float32),
             region_dim=region_embs.shape[1],
             text_dim=text_embs.shape[1],
-            text_output_dim=256
+            text_output_dim=text_output_dim
         ).to(device)
 
         optimizer = optim.Adam(enhancedModel.parameters(), lr=lr)
 
         best_r2 = float("-inf")
-        for i in range(epochs):
+        for i in tqdm(range(epochs), desc="Prompt Learning"):
             optimizer.zero_grad()
             y_pred = enhancedModel(T_train, X_train)
             loss = loss_fn(y_pred.squeeze(), Y_train.squeeze())
@@ -95,6 +97,8 @@ def crimePred(counts, text_embs, region_embs, kf_splits=10, epochs=200, lr=1e-3,
                         y_preds[kf_idx] = y_pred
                         y_truths[kf_idx] = y_truths_tmp
                         best_r2 = r2
+                    
+                nni.report_intermediate_result(r2)        
 
         kf_idx += 1
 
@@ -104,21 +108,22 @@ def crimePred(counts, text_embs, region_embs, kf_splits=10, epochs=200, lr=1e-3,
 
 
 def run_task(task="crime", text_embs=None, region_embs=None, device="cuda",
-             kf_splits=10, epochs=2000, lr=0.08, result_file="experiment_results.csv"):
+             kf_splits=10, epochs=args.epochs, lr=args.learning_rate, text_output_dim=args.text_output_dim, result_file="experiment_results.csv"):
     """运行不同任务并保存结果"""
-    if task == "check":
-        labels = np.load("/data4/jiangchangyang/HAFusion-main/data_Chi/check_counts.npy")
+    if task == "checkIn":
+        labels = np.load("/data5/luyisha/guozitao/HAFusion/data_Chi/check_counts.npy")
         mask = labels > 0
         labels, text_embs, region_embs = labels[mask], text_embs[mask], region_embs[mask]
     elif task == "crime":
-        labels = np.load("/data4/jiangchangyang/HAFusion-main/data_Chi/crime_counts.npy")
-    elif task == "service":
-        labels = np.load("/data4/jiangchangyang/HAFusion-main/data_Chi/serviceCall_counts.npy")
+        labels = np.load("/data5/luyisha/guozitao/HAFusion/data_Chi/crime_counts.npy")
+    elif task == "serviceCall":
+        labels = np.load("/data5/luyisha/guozitao/HAFusion/data_Chi/serviceCall_counts.npy")
     else:
         raise ValueError("Unknown task!")
 
     mae, rmse, r2 = crimePred(labels, text_embs, region_embs,
-                              kf_splits=kf_splits, epochs=epochs, lr=lr, device=device)
+                              kf_splits=kf_splits, epochs=epochs, lr=lr, text_output_dim=text_output_dim, device=device)
+    nni.report_final_result(r2)
 
     print(f"{task.capitalize()} Prediction: MAE={mae:.3f}, RMSE={rmse:.3f}, R2={r2:.3f}")
 
@@ -129,6 +134,7 @@ def run_task(task="crime", text_embs=None, region_embs=None, device="cuda",
         "kf_splits": kf_splits,
         "epochs": epochs,
         "lr": lr,
+        "text_output_dim": text_output_dim,
         "MAE": mae,
         "RMSE": rmse,
         "R2": r2
@@ -145,12 +151,30 @@ def run_task(task="crime", text_embs=None, region_embs=None, device="cuda",
 
 if __name__ == '__main__':
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    task = args.task
+    model_params = {
+        "epochs": args.epochs,
+        "lr": args.learning_rate,
+        "text_output_dim": args.text_output_dim
+    }
+    ##### nni #####
+    optimized_params = nni.get_next_parameter() # 更新超参
+    model_params.update(optimized_params)
+    ##### nni #####
 
-    # 公共嵌入
-    region_embs = np.load("/data4/jiangchangyang/HAFusion-main/best_emb.npy")   # (77, 144)
-    text_embs = np.load("/data4/jiangchangyang/Qwen-VL-master/region_embeddings.npy")  # (77, 3584)
+    if task == "crime":
+        region_emb_path = "/data5/luyisha/guozitao/LLM_region/data/best_emb_chi_crime.npy"
+        prompt_emb_path = f"/data5/luyisha/guozitao/LLM_region/prompt_embs_{args.model}_crime.npy"
+    elif task == "checkIn":
+        region_emb_path = "/data5/luyisha/guozitao/LLM_region/data/best_emb_chi_checkIn.npy"
+        prompt_emb_path = f"/data5/luyisha/guozitao/LLM_region/prompt_embs_{args.model}_checkIn.npy"
+    elif task == "serviceCall":
+        region_emb_path = "/data5/luyisha/guozitao/LLM_region/data/best_emb_chi_serviceCall.npy"
+        prompt_emb_path = f"/data5/luyisha/guozitao/LLM_region/prompt_embs_{args.model}_serviceCall.npy"
+    else:
+        raise ValueError("Unknown task!")
+    region_embs = np.load(region_emb_path)   # (77, 144)
+    prompt_embs = np.load(prompt_emb_path)  # (77, 3584)
 
     # 运行不同任务
-    # run_task("crime", text_embs, region_embs, device=device)
-    run_task("check", text_embs, region_embs, device=device)
-    run_task("service", text_embs, region_embs, device=device)
+    run_task(task, prompt_embs, region_embs, device=device, kf_splits=10, epochs=model_params["epochs"], lr=model_params["lr"], text_output_dim=model_params["text_output_dim"])

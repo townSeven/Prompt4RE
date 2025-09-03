@@ -1,0 +1,25 @@
+# 搜索空间的文件所在位置
+searchSpaceFile: search_space.json
+# 运行文件使用的命令，Linux是 python3 mian.py    ***
+trialCommand: python PromptLearning.py --task serviceCall --model llama
+trialGpuNumber: 1
+# 同时运行的trial数量    ***
+trialConcurrency: 2
+# 最大的trial数量
+maxTrialNumber: 2000
+# 最大的实验时间，当最大时间或者最大trial达到时终止实验
+maxExperimentDuration: 24h
+# 实验结果文件的存储位置，不能含有中文
+experimentWorkingDirectory: "./nni-experiment"
+# 使用的调优算法
+tuner:
+  name: Random
+  classArgs:
+    # 需要将传入的参数进行最大化还是最小化，若传入NNI的结果是loss就最小化，是准确率等最大化
+    optimize_mode: maximize
+# 多卡并行    
+trainingService:
+  platform: local
+  useActiveGpu: true            # 允许在已“活跃”的GPU上继续调度
+  gpuIndices: [4]            # 仅使用第0和第1号GPU        ***
+  maxTrialNumberPerGpu: 10      # 每张GPU最多并发4个trial       ***

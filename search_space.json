@@ -1,0 +1,5 @@
+{
+    "learning_rate": {"_type":"loguniform", "_value": [0.0001, 0.01]},
+    "epochs":{"_type":"choice","_value":[1000, 2000, 3000]},
+    "text_output_dim":{"_type":"choice","_value":[64, 96, 144, 256]}
+}
